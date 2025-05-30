@@ -1,69 +1,59 @@
 package ed.lab.ed1final.controller;
 
-import ed.lab.ed1final.service.TrieService;
+import ed.lab.ed1final.trie.Trie;
+import ed.lab.ed1final.trie.TrieResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/trie")
 public class TrieController {
 
-    private final TrieService trieService;
+    private final Trie trie;
 
-    public TrieController(TrieService trieService) {
-        this.trieService = trieService;
+    @Autowired
+    public TrieController(Trie trie) {
+        this.trie = trie;
     }
 
-    // POST /trie/{word} - Insertar palabra
+    private boolean isValid(String word) {
+        return StringUtils.hasText(word) && word.matches("[a-z]+");
+    }
+
     @PostMapping("/{word}")
-    public ResponseEntity<Void> insertWord(@PathVariable String word) {
-        if (!isValidWord(word)) {
+    public ResponseEntity<?> insertWord(@PathVariable String word) {
+        if (!isValid(word)) {
             return ResponseEntity.badRequest().build();
         }
-        trieService.insertWord(word);
+        trie.insert(word);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    // GET /trie/{word}/count - Obtener cantidad de ocurrencias exactas
     @GetMapping("/{word}/count")
-    public ResponseEntity<Map<String, Object>> countWordsEqualTo(@PathVariable String word) {
-        if (!isValidWord(word)) {
-            return ResponseEntity.badRequest().build();
-        }
-        int count = trieService.countWordsEqualTo(word);
-        return ResponseEntity.ok(Map.of(
-                "word", word,
-                "wordsEqualTo", count
-        ));
+    public ResponseEntity<?> countWordsEqualTo(@PathVariable String word) {
+        TrieResponse response = new TrieResponse();
+        response.setWord(word);
+        response.setWordsEqualTo(trie.countWordsEqualTo(word));
+        return ResponseEntity.ok(response);
     }
 
-    // GET /trie/{prefix}/prefix - Obtener cantidad de palabras que empiezan con el prefijo
     @GetMapping("/{prefix}/prefix")
-    public ResponseEntity<Map<String, Object>> countWordsStartingWith(@PathVariable String prefix) {
-        if (!isValidWord(prefix)) {
-            return ResponseEntity.badRequest().build();
-        }
-        int count = trieService.countWordsStartingWith(prefix);
-        return ResponseEntity.ok(Map.of(
-                "word", prefix,
-                "wordsStartingWith", count
-        ));
+    public ResponseEntity<?> countWordsStartingWith(@PathVariable String prefix) {
+        TrieResponse response = new TrieResponse();
+        response.setPrefix(prefix);
+        response.setWordsStartingWith(trie.countWordsStartingWith(prefix));
+        return ResponseEntity.ok(response);
     }
 
-    // DELETE /trie/{word} - Eliminar una ocurrencia de la palabra
     @DeleteMapping("/{word}")
-    public ResponseEntity<Void> eraseWord(@PathVariable String word) {
-        if (!isValidWord(word)) {
+    public ResponseEntity<?> deleteWord(@PathVariable String word) {
+        if (!isValid(word) || trie.countWordsEqualTo(word) == 0) {
             return ResponseEntity.badRequest().build();
         }
-        trieService.eraseWord(word);
+        trie.erase(word);
         return ResponseEntity.noContent().build();
-    }
-
-    private boolean isValidWord(String word) {
-        return word != null && !word.isEmpty() && word.matches("[a-z]+");
     }
 }
