@@ -13,6 +13,7 @@ public class Trie {
         int prefixCount = 0;
     }
 
+
     private final TrieNode root;
 
     public Trie() {
